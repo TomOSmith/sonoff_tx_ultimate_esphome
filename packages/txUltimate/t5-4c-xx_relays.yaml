@@ -1,0 +1,5 @@
+packages:
+  relay1: !include { file: ./t5-xx-xx-relay.yaml, vars: { iId: 1 } }
+  relay2: !include { file: ./t5-xx-xx-relay.yaml, vars: { iId: 2 } }
+  relay3: !include { file: ./t5-xx-xx-relay.yaml, vars: { iId: 3 } }
+  relay4: !include { file: ./t5-xx-xx-relay.yaml, vars: { iId: 4 } }

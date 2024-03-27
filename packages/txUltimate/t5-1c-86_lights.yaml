@@ -1,0 +1,48 @@
+light:
+  - name: "LED Button 1"
+    platform: partition
+    id: led_button_1
+    segments:
+      - id: leds
+        from: 27
+        to: 27
+      - id: leds
+        from: 0
+        to: 5
+      - id: leds
+        from: 13
+        to: 19
+
+  - name: "LED Button 2"
+    platform: binary
+    id: led_button_2
+    output: led_binary_2
+
+  - name: "LED Button 3"
+    platform: binary
+    id: led_button_3
+    output: led_binary_3
+
+  - name: "LED Button 4"
+    platform: binary
+    id: led_button_4
+    output: led_binary_4
+
+output:
+  - id: led_binary_2
+    platform: template
+    type: binary
+    write_action:
+      - logger.log: "Imaginary led_button_2 press"
+
+  - id: led_binary_3
+    platform: template
+    type: binary
+    write_action:
+      - logger.log: "Imaginary led_button_3 press"
+
+  - id: led_binary_4
+    platform: template
+    type: binary
+    write_action:
+      - logger.log: "Imaginary led_button_4 press"

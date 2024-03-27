@@ -1,0 +1,382 @@
+# Required Variables
+# name: str                    name of device
+# ip: str                      IP address of device
+# light_format: int            led layout format (86 = EUR, 120 = USA)
+# button_count:int             number of buttons
+# relay_count:int              number of relays
+#
+# Optional  Variables
+# button_on_time: duration     time for button to be on (must be positive)
+# light_on_time: duration      time for light to be on (0 is disabled)
+# haptic_on_time: duration     time for haptic feedback to be on (0 is disabled)
+# failsafe_mode: bool          whether buttons control relays if wifi is disconnected
+
+defaults:
+  button_on_time: 300ms
+  light_on_time: 300ms
+  haptic_on_time: 300ms
+  failsafe_mode: "true"
+
+globals:
+  - id: button_pressed
+    type: int
+    restore_value: no
+    initial_value: "0"
+  - id: failsafe
+    type: bool
+    restore_value: no
+    initial_value: "true"
+
+## Common Packages
+packages:
+  device_base: !include
+    file: ./esp32.base.yaml
+    vars:
+      ip: ${ip}
+  lights: !include
+    file: "./txUltimate/t5-xx-${light_format}_lights.yaml"
+    vars:
+      button_count: ${button_count}
+  relays: !include "./txUltimate/t5-${relay_count}c-xx_relays.yaml"
+
+## Touch
+external_components:
+  - source:
+      type: local
+      path: /config/esphome/components
+      # type: git
+      # url: https://github.com/SmartHome-yourself/sonoff-tx-ultimate-for-esphome
+      # ref: main
+    components: [tx_ultimate_touch]
+
+esphome:
+  name: $name
+  friendly_name: $name
+  project:
+    name: sleepout.colleen
+    version: "0.20240326.1756"
+
+  on_boot:
+    then:
+      - binary_sensor.template.publish:
+          id: button_1
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_2
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_3
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_4
+          state: OFF
+      - binary_sensor.template.publish:
+          id: swipe_up
+          state: OFF
+      - binary_sensor.template.publish:
+          id: swipe_down
+          state: OFF
+      - binary_sensor.template.publish:
+          id: multi_press
+          state: OFF
+
+wifi:
+  on_connect:
+    - globals.set:
+        id: failsafe
+        value: "false"
+    - light.turn_off:
+        id: led_bottom
+
+  on_disconnect:
+    - globals.set:
+        id: failsafe
+        value: ${failsafe_mode}
+    - light.turn_on:
+        id: led_bottom
+        red: 20%
+        green: 0%
+        blue: 0%
+        effect: pulse
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Throttle writing parameters to the internal flash memory to reduce ESP memory wear / degradation
+preferences:
+  flash_write_interval: 15min
+
+uart:
+  tx_pin: GPIO19
+  rx_pin: GPIO22
+  id: uart_touch
+  baud_rate: 115200
+  data_bits: 8
+  stop_bits: 1
+  parity: NONE
+
+tx_ultimate_touch:
+  id: tx_touch
+  uart: uart_touch
+
+  on_press:
+    - lambda: >
+        ESP_LOGD("tx_ultimate_touch.on_press", "Touch Position: %d / State: %d", touch.x, touch.state);
+
+  on_release:
+    - lambda: >
+        ESP_LOGD("tx_ultimate_touch.on_release", "Release Position: %d / State: %d", touch.x, touch.state);
+    - script.execute:
+        id: handle_release
+        pos: lambda "return touch.x;"
+        long_press: false
+    - homeassistant.event:
+        event: esphome.button_pressed
+        data:
+          button: lambda "return id(button_pressed);"
+          press: single
+
+  on_long_touch_release:
+    - lambda: >
+        ESP_LOGD("tx_ultimate_touch.on_long_touch_release", "Long Touch Release Position: %d / State: %d", touch.x, touch.state);
+    - script.execute:
+        id: handle_release
+        pos: lambda "return touch.x;"
+        long_press: true
+    - homeassistant.event:
+        event: esphome.button_pressed
+        data:
+          button: lambda "return id(button_pressed);"
+          press: long
+
+  on_swipe_left:
+    - lambda: >
+        ESP_LOGD("tx_ultimate_touch.on_swipe_left", "Swipe Left Position: %d / State: %d", touch.x, touch.state);
+    - binary_sensor.template.publish:
+        id: swipe_up
+        state: ON
+
+  on_swipe_right:
+    - lambda: >
+        ESP_LOGD("tx_ultimate_touch.on_swipe_right", "Swipe Right Position: %d / State: %d", touch.x, touch.state);
+    - binary_sensor.template.publish:
+        id: swipe_down
+        state: ON
+
+  on_full_touch_release:
+    - lambda: >
+        ESP_LOGD("tx_ultimate_touch.on_full_touch_release", "Full Touch Release Position: %d / State: %d", touch.x, touch.state);
+    - binary_sensor.template.publish:
+        id: multi_press
+        state: ON
+
+## Psuedo Buttons
+binary_sensor:
+  - id: button_1
+    platform: template
+    name: "Button 1"
+    on_press:
+      then:
+        - script.execute:
+            id: button_on_press
+            button: "button_1"
+            led: "led_button_1"
+
+  - id: button_2
+    platform: template
+    name: "Button 2"
+    on_press:
+      then:
+        - script.execute:
+            id: button_on_press
+            button: "button_2"
+            led: "led_button_2"
+
+  - id: button_3
+    platform: template
+    name: "Button 3"
+    on_press:
+      then:
+        - script.execute:
+            id: button_on_press
+            button: "button_3"
+            led: "led_button_3"
+
+  - id: button_4
+    platform: template
+    name: "Button 4"
+    on_press:
+      then:
+        - script.execute:
+            id: button_on_press
+            button: "button_4"
+            led: "led_button_4"
+
+  - id: swipe_up
+    platform: template
+    name: "Swipe Up"
+    on_press:
+      then:
+        - script.execute:
+            id: button_on_press
+            button: "swipe_up"
+            led: "led_top"
+
+  - id: swipe_down
+    platform: template
+    name: "Swipe Down"
+    on_press:
+      then:
+        - script.execute:
+            id: button_on_press
+            button: "swipe_down"
+            led: "led_bottom"
+
+  - id: multi_press
+    platform: template
+    name: "Multi Press"
+    on_press:
+      then:
+        - lambda: 'ESP_LOGD("${name} multi_press on_press", "${name} multi_press on_press");'
+        - if:
+            condition:
+              lambda: "return ${haptic_on_time} > 0;"
+            then:
+              - switch.turn_on: haptics
+        - light.toggle:
+            id: led_nightlight
+        - delay: ${button_on_time}
+        - binary_sensor.template.publish:
+            id: multi_press
+            state: OFF
+
+## Audio
+# I2S audio component
+i2s_audio:
+  i2s_bclk_pin: GPIO2 # BCK
+  i2s_lrclk_pin: GPIO4 # WS
+
+# Player component for I2S
+media_player:
+  - platform: i2s_audio
+    name: Speaker
+    dac_type: external
+    mode: mono
+    i2s_dout_pin: GPIO15
+    i2s_comm_fmt: lsb
+    mute_pin:
+      number: GPIO26
+      inverted: true
+
+## Switches
+switch:
+  - platform: gpio
+    id: ca51_pow
+    name: "touch panel power"
+    pin:
+      number: GPIO5
+      inverted: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+  - platform: gpio
+    id: "haptics"
+    pin: GPIO21
+    name: "Haptics"
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - delay: ${haptic_on_time}
+      - switch.turn_off: haptics
+
+  # Relays
+  - platform: gpio
+    id: relay_1
+    name: "Relay 1"
+    pin: GPIO18
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: gpio
+    id: relay_2
+    name: "Relay 2"
+    pin: GPIO17
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: gpio
+    id: relay_3
+    name: "Relay 3"
+    pin: GPIO27
+    restore_mode: RESTORE_DEFAULT_OFF
+
+script:
+  # Convert touch panel release to button pressed
+  #   pos  0 1 2 3 4 5 6 7 8 9 10
+  # but 1  1 1 1 1 1 1 1 1 1 1 1
+  #     2  1 1 1 1 1 1 2 2 2 2 2
+  #     3  1 1 1 1 2 2 2 2 3 3 3
+  #     4  1 1 1 2 2 2 3 3 3 4 4
+  - id: handle_release
+    mode: restart
+    parameters:
+      pos: int
+      long_press: bool
+    then:
+      - lambda: |-
+          ESP_LOGD("handle_release", "preamble = button_count: ${button_count}, pos: %d", pos);
+      - if:
+          condition:
+            lambda: "return (${button_count} >= 1 and ${button_count} <=4 and pos >= 0 and pos <= 10);"
+          then:
+            - lambda: |-
+                //                 pos   00 01 02 03 04 05 06 07 08 09 10 
+                int button_map[5][11] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  // button_count
+                                         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  // 1
+                                         {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2},  // 2
+                                         {1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3},  // 3
+                                         {1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4}}; // 4
+                ESP_LOGD("handle_release", "postamble = mapping: %d", button_map[${button_count}][pos]);
+                switch (button_map[${button_count}][pos])
+                {
+                  case 1:
+                    id(button_pressed) = 1;
+                    id(button_1).publish_state(true);
+                    break;
+                  case 2:
+                    id(button_pressed) = 2;
+                    id(button_2).publish_state(true);
+                    break;
+                  case 3:
+                    id(button_pressed) = 3;
+                    id(button_3).publish_state(true);
+                    break;
+                  case 4:
+                    id(button_pressed) = 4;
+                    id(button_4).publish_state(true);
+                     break;
+                }
+
+  - id: button_on_press
+    mode: restart
+    parameters:
+      iButton: int
+    then:
+      - logger.log:
+          level: DEBUG
+          tag: "${name}"
+          format: "${name} button_%d on_press"
+          args: [iButton]
+      - if:
+          condition:
+            lambda: "return ${haptic_on_time} > 0;"
+          then:
+            - switch.turn_on: haptics
+      - if:
+          condition:
+            lambda: "return ${light_on_time} > 0;"
+          then:
+            - lambda: auto call = id(led_button_iButton).turn_on();
+                call.set_flash_length(${light_in_time});
+                call.set_rgb(0, 0, 1);
+                call.perform();
+      - delay: ${button_on_time}
+      - lambda: "id(button_${iButton}).publish_state(false);"

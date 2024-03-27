@@ -1,0 +1,20 @@
+substitutions:
+  name: "exampletxultimate"
+  ip: "192.168.1.200"
+  light_format: "120"
+  button_count: "3"
+  relay_count: "3"
+
+## Common Packages
+packages:
+  device_base: !include
+    file: ./packages/txUltimate.base.yaml
+    vars: # Shouldn't need to force substitution pass through
+      name: ${name}
+      ip: ${ip}
+      light_format: ${light_format}
+      button_count: ${button_count}
+      relay_count: ${relay_count}
+
+logger:
+  level: DEBUG
