@@ -1,4 +1,4 @@
-Do not use this yet.  It doesn't compile in ESPHome.  Trying to figure out package substitution to reduce file verbosity to handle all combinations of button / relay / led arrangement.
+Do not use this yet.  It doesn't compile in ESPHome.  Trying to figure out package substitution to reduce file verbosity to handle all combinations of button / relay / led arrangement.  (Side note: still figuring out how to Github...)
 
 # Sonoff TX Ultimate ESPHome
 A base configuration for Sonoff TX Ultimate switches for use with ESPHome packages.  Covers 1-4 relay counts and 86 (EUR) / 120 (US) variants.  Most of the configuration is done in /packages/txUltimate.base.yaml and the associated base files for ESP32 configuration (/packages/esp32.base.yaml) and general base configuration (/packages/device.base.yaml)
