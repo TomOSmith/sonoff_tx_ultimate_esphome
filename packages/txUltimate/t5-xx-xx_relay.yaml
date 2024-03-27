@@ -1,0 +1,15 @@
+# Expected Variables
+# iId: int
+
+substitions:
+  GPIORelay1: GPIO18
+  GPIORelay2: GPIO17
+  GPIORelay3: GPIO27
+  GPIORelay4: GPIO23
+
+switch:
+  - platform: gpio
+    id: relay_${iId}
+    name: "Relay ${iId}"
+    pin: ${GPIORelay${iId}}
+    restore_mode: RESTORE_DEFAULT_OFF

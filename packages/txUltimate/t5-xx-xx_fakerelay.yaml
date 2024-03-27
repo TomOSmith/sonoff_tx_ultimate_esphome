@@ -1,0 +1,8 @@
+# Expected Variables
+# iId: int
+
+switch:
+  - platform: template
+    id: relay_${iId}
+    name: "Relay ${iId}"
+    lambda: return false;

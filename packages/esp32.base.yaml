@@ -1,1 +1,25 @@
-../../packages/esp32.base.yaml
+# Variables required
+# ip:str   IP address
+
+packages:
+  device_base: !include
+    file: ./device.base.yaml
+    vars:
+      ip: ${ip}
+
+esp32:
+  board: esp32dev
+
+# Bluetooth
+# bluetooth_proxy:
+#   active: true
+# esp32_ble_tracker:
+#   scan_parameters:
+#     interval: 1100ms
+#     window: 1100ms
+#     active: true
+
+sensor:
+  - platform: internal_temperature
+    name: "Internal Temperature"
+    entity_category: "diagnostic"
